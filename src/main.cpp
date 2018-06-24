@@ -3,6 +3,8 @@
 
 #include <QSettings>
 #include <QDate>
+#include <QFile>
+#include <QTextStream>
 
 int main(int argc, char *argv[])
 {
@@ -23,14 +25,14 @@ int main(int argc, char *argv[])
         namePartner = "c";
 
     // Read Config.ini from path
-    QSettings config( path, QSettings::IniFormat );
+    QSettings config( path+"Config.ini", QSettings::IniFormat );
     config.beginGroup("Options");
     int payday = config.value("payday").toInt();
     int targetAmount = config.value("targetAmount").toInt();
     config.endGroup();
     config.beginGroup("Flags");
-    QDate lastChange = QDate::fromString(config.value("lastChange").toString(),"dd.MM.yy");
-    QDate nextPayday = QDate::fromString(config.value("nextPayday").toString(),"dd.MM.yy");
+    QDate lastChange = QDate::fromString(config.value("lastChange").toString(),"dd.MM.yyyy");
+    QDate nextPayday = QDate::fromString(config.value("nextPayday").toString(),"dd.MM.yyyy");
     bool amount = config.value(name + "Amount").toBool();
     bool amountPartner = config.value(namePartner + "Amount").toBool();
     bool paid = config.value(name + "Paid").toBool();
@@ -47,7 +49,7 @@ int main(int argc, char *argv[])
     }
     else if (nextPayday.day()>payday)
     {
-        nextPayday.addMonths(1);
+        nextPayday = nextPayday.addMonths(1);
         nextPayday.setDate(nextPayday.year(), nextPayday.month(), payday);
         config.beginGroup("Flags");
         config.setValue("nextPayday", nextPayday);
@@ -62,14 +64,18 @@ int main(int argc, char *argv[])
         // increment payday, reset flags
         openGui = true;
         config.beginGroup("Flags");
-        config.setValue("nextPayday", (nextPayday.addMonths(1).toString("dd.MM.yy")));
+        config.setValue("nextPayday", (nextPayday.addMonths(1).toString("dd.MM.yyyy")));
         config.setValue("cAmount", 0);
         config.setValue("jAmount", 0);
         config.setValue("cPaid", 0);
         config.setValue("jPaid", 0);
         config.endGroup();
 
-        //todo: neue Zeile in DB
+        QFile database(path+"GemeinschaftskontoDatenbank.txt");
+        database.open(QIODevice::ReadWrite | QIODevice::Text | QIODevice::Append); // todo: catch error
+        QTextStream databaseStream(&database);
+        databaseStream << date.year() << "\t" << date.month() << "\t" << targetAmount
+                       << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << endl;
     }
     else if (!amount)
     {
